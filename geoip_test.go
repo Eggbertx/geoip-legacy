@@ -89,3 +89,56 @@ func TestCountryCodesByIPv4Addr(t *testing.T) {
 	assert.Equal(t, "Curaçao", country.NameUTF8)
 	assert.Equal(t, "NA", country.Continent)
 }
+
+func TestLookupPrivateIPv4Country(t *testing.T) {
+	db := setupTest(t)
+	if db == nil {
+		return
+	}
+	defer func() {
+		assert.NoError(t, db.Close())
+	}()
+
+	if !assert.Equal(t, CountryEdition, db.Type) {
+		return
+	}
+
+	country, err := db.GetCountryByAddr("127.0.0.1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "--", country.Code)
+	assert.Equal(t, "--", country.Code3)
+	assert.Equal(t, "N/A", country.NameASCII)
+	assert.Equal(t, "N/A", country.NameUTF8)
+	assert.Equal(t, "--", country.Continent)
+
+	country, err = db.GetCountryByAddr("192.168.1.1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "--", country.Code)
+	assert.Equal(t, "--", country.Code3)
+	assert.Equal(t, "N/A", country.NameASCII)
+	assert.Equal(t, "N/A", country.NameUTF8)
+	assert.Equal(t, "--", country.Continent)
+
+	country, err = db.GetCountryByAddr("10.0.0.1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "--", country.Code)
+	assert.Equal(t, "--", country.Code3)
+	assert.Equal(t, "N/A", country.NameASCII)
+	assert.Equal(t, "N/A", country.NameUTF8)
+	assert.Equal(t, "--", country.Continent)
+}
