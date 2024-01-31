@@ -1,10 +1,11 @@
 package geoiplegacy
 
 import (
-	"errors"
 	"os"
 )
 
+// OpenDB opens and returns the MaxMind GeoIP v1 database, returning the database
+// and any errors
 func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 	dbFile, err := os.Open(dbPath)
 	if err != nil {
@@ -35,9 +36,9 @@ func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 		return nil, ErrNoSegments
 	}
 
-	idxSize := gi.getIndexSize()
+	idxSize := gi.GetIndexSize()
 	if idxSize < 0 {
-		return nil, errors.New("index size < 0, file may be corrupt")
+		return nil, ErrNegativeIndex
 	}
 
 	if options.IndexCache {
@@ -48,7 +49,7 @@ func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 			return nil, err
 		}
 		if n != int(idxSize) {
-			return nil, errors.New("unable to read into index cache")
+			return nil, ErrIndexCacheUnreadable
 		}
 	}
 

@@ -2,13 +2,13 @@ package geoiplegacy
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"os"
 	"time"
 )
 
+// CountryResult is the result of scanning the database for the location of a network address
 type CountryResult struct {
 	Code      string
 	Code3     string
@@ -17,6 +17,9 @@ type CountryResult struct {
 	Continent string
 }
 
+// GeoIPOptions are used when reading the file. They are mostly carried over
+// from libGeoIP and are not all in use. Some may be removed as I work to
+// make this package more "Go-like"
 type GeoIPOptions struct {
 	Standard    bool
 	MemoryCache bool
@@ -26,6 +29,7 @@ type GeoIPOptions struct {
 	IsIPv6      bool
 }
 
+// DB represents a legacy GeoIP database, usually having a .dat extension
 type DB struct {
 	file             *os.File
 	Path             string
@@ -113,7 +117,7 @@ func (db *DB) setupSegments() error {
 				}
 				if n != segmentRecordLength {
 					db.segments = nil
-					return errors.New("didn't read full segment")
+					return ErrSegmentNotRead
 				}
 				for j := 0; j < segmentRecordLength; j++ {
 					db.segments[0] += uint(buf[j] << (j * 8))
@@ -151,7 +155,7 @@ func (db *DB) setupSegments() error {
 	return nil
 }
 
-func (db *DB) dbHasContent() bool {
+func (db *DB) hasContent() bool {
 	if db.Type != CountryEdition &&
 		db.Type != ProxyEdition &&
 		db.Type != NetSpeedEdition &&
@@ -165,10 +169,12 @@ func (db *DB) dbHasContent() bool {
 	return false
 }
 
-func (db *DB) getIndexSize() int32 {
+// GetIndexSize returns the size of the database index. If it is negative,
+// something has gone wrong during a read
+func (db *DB) GetIndexSize() int32 {
 	var segment uint
 	var indexSize int32
-	if !db.dbHasContent() {
+	if !db.hasContent() {
 		return int32(db.Size)
 	}
 	segment = db.segments[0]
@@ -320,6 +326,11 @@ func (db *DB) seekRecordv4(ipNum uint32, ip net.IP) (int, error) {
 	return 0, nil
 }
 
+// IPv4ToNumber returns a 32-bit unsigned integer  representing the IPv4 address
+func (db *DB) IPv4ToNumber(addr net.IP) uint32 {
+	return binary.BigEndian.Uint32(addr.To4())
+}
+
 func (db *DB) idByAddrv4(addr net.IP) (int, error) {
 	if addr == nil {
 		return 0, ErrInvalidIP
@@ -331,10 +342,13 @@ func (db *DB) idByAddrv4(addr net.IP) (int, error) {
 		return 0, fmt.Errorf("invalid database type %s, expected %s",
 			db.Type.String(), CountryEdition.String())
 	}
-	ipNum := binary.BigEndian.Uint32(addr.To4())
+	ipNum := db.IPv4ToNumber(addr)
 	return db.seekRecordv4(ipNum, addr)
 }
 
+// GetCountryByAddr scans the database for the given IP address. If a domain
+// is passed to it, it tries to resolve it to an IP, then looks that up.
+// Currently only IPv4 is supported
 func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
 	ips, err := net.LookupIP(addr)
 	if err != nil {
@@ -357,6 +371,7 @@ func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
 	return nil, ErrInvalidCountryID
 }
 
+// Close closes the database file if it is not nil
 func (db *DB) Close() error {
 	if db.file == nil {
 		return nil
