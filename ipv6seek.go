@@ -26,25 +26,18 @@ func (db *DB) seekRecordv6(ipNum *big.Int, ip net.IP) (int, error) {
 			break
 		}
 
-		if db.cache == nil && db.indexCache == nil {
-			// read from disk
-			tmpBuf := make([]uint8, recordPairLength)
-			n, err := db.file.ReadAt(tmpBuf, int64(byteOffset))
-			if err != nil {
-				return 0, err
-			}
-			if n != int(recordPairLength) {
-				return 0, fmt.Errorf(
-					"unable to read full record (read %d, expected %d)",
-					n, recordPairLength)
-			}
-			for i := 0; i < int(recordPairLength); i++ {
-				stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
-			}
-		} else if db.indexCache == nil {
-			buf = db.cache[byteOffset:]
-		} else {
-			buf = db.indexCache[byteOffset:]
+		tmpBuf := make([]uint8, recordPairLength)
+		n, err := db.file.ReadAt(tmpBuf, int64(byteOffset))
+		if err != nil {
+			return 0, err
+		}
+		if n != int(recordPairLength) {
+			return 0, fmt.Errorf(
+				"unable to read full record (read %d, expected %d)",
+				n, recordPairLength)
+		}
+		for i := 0; i < int(recordPairLength); i++ {
+			stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
 		}
 
 		if checkBitV6(depth, ip) != 0 {

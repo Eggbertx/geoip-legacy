@@ -19,24 +19,16 @@ type CountryResult struct {
 	Continent string
 }
 
-// GeoIPOptions are used when reading the file. They are mostly carried over
-// from libGeoIP and are not all in use. Some may be removed as I work to
-// make this package more "Go-like"
+// GeoIPOptions are used when reading the database file
 type GeoIPOptions struct {
-	Standard    bool
-	MemoryCache bool
-	CheckCache  bool
-	IndexCache  bool
-	MMapCache   bool
-	IsIPv6      bool
+	Standard bool
+	IsIPv6   bool
 }
 
 // DB represents a legacy GeoIP database, usually having a .dat extension
 type DB struct {
 	file             *os.File
 	Path             string
-	cache            []byte
-	indexCache       []byte
 	segments         []uint
 	Type             DBType
 	ModTime          time.Time
@@ -44,7 +36,7 @@ type DB struct {
 	Size             int64
 	RecordLength     uint8
 	Charset          Charset
-	netMask          int // netmask of last lookup, set using depth in _GeoIP_seek_record
+	netMask          int // netmask of last lookup, set using depth in the seek methods
 	lastModTimeCheck time.Time
 	ExtFlags         ExtFlags // bit 0 teredo support enabled
 }
@@ -193,15 +185,10 @@ func (db *DB) GetIndexSize() int32 {
 }
 
 func (db *DB) checkModTime() error {
-	if !db.Options.CheckCache {
-		return nil
-	}
-
 	buf, err := db.file.Stat()
 	if err != nil {
 		return err
 	}
-	// bufSize := buf.Size()
 	bufMod := buf.ModTime()
 	t := time.Now()
 	if t.Sub(db.lastModTimeCheck) <= time.Second {

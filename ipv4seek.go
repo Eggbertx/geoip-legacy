@@ -23,29 +23,23 @@ func (db *DB) seekRecordv4(ipNum uint32, ip net.IP) (int, error) {
 			break
 		}
 
-		if db.cache == nil && db.indexCache == nil {
-			// read from disk
-			if _, err = db.file.Seek(int64(byteOffset), 0); err != nil {
-				return 0, err
-			}
-			tmpBuf := make([]uint8, recordPairLength)
-			n, err := db.file.ReadAt(tmpBuf, int64(byteOffset))
-			if err != nil {
-				return 0, err
-			}
-			for i := 0; i < int(recordPairLength); i++ {
-				stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
-			}
-			if n != int(recordPairLength) {
-				return 0, fmt.Errorf(
-					"unable to read full record (read %d, expected %d)",
-					n, recordPairLength)
-			}
-		} else if db.indexCache == nil {
-			buf = db.cache[byteOffset:]
-		} else {
-			buf = db.indexCache[byteOffset:]
+		if _, err = db.file.Seek(int64(byteOffset), 0); err != nil {
+			return 0, err
 		}
+		tmpBuf := make([]uint8, recordPairLength)
+		n, err := db.file.ReadAt(tmpBuf, int64(byteOffset))
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < int(recordPairLength); i++ {
+			stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
+		}
+		if n != int(recordPairLength) {
+			return 0, fmt.Errorf(
+				"unable to read full record (read %d, expected %d)",
+				n, recordPairLength)
+		}
+
 		if ipNum&(1<<depth) != 0 {
 			// take the right-hand branch
 			if db.RecordLength == 3 {

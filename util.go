@@ -55,11 +55,6 @@ func prepareTeredo(ip net.IP) {
 
 func (db *DB) setupBuffers() ([]uint8, []byte) {
 	stackBuffer := make([]uint8, MaxRecordLength*2)
-	var buf []byte
-	if db.cache == nil {
-		buf = stackBuffer
-	} else {
-		buf = nil
-	}
+	var buf []byte = stackBuffer
 	return stackBuffer, buf
 }

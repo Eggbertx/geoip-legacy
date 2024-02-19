@@ -41,25 +41,25 @@ func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 		return nil, ErrNegativeIndex
 	}
 
-	if options.IndexCache {
-		gi.indexCache = make([]byte, idxSize)
-		var n int
-		n, err = gi.file.Read(gi.indexCache)
-		if err != nil {
-			return nil, err
-		}
-		if n != int(idxSize) {
-			return nil, ErrIndexCacheUnreadable
-		}
-	}
+	// if options.IndexCache {
+	// 	gi.indexCache = make([]byte, idxSize)
+	// 	var n int
+	// 	n, err = gi.file.Read(gi.indexCache)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if n != int(idxSize) {
+	// 		return nil, ErrIndexCacheUnreadable
+	// 	}
+	// }
 
-	if options.MemoryCache || options.MMapCache {
-		gi.ModTime = fi.ModTime()
+	// if options.MemoryCache || options.MMapCache {
+	// 	gi.ModTime = fi.ModTime()
 
-		if options.MMapCache {
-			gi.cache = make([]byte, gi.Size)
-		}
-	}
+	// 	if options.MMapCache {
+	// 		gi.cache = make([]byte, gi.Size)
+	// 	}
+	// }
 
 	return gi, nil
 }

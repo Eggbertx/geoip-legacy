@@ -201,3 +201,19 @@ func TestCountryCodesByIPv6Addr(t *testing.T) {
 	assert.Equal(t, "Curaçao", country.NameUTF8)
 	assert.Equal(t, "NA", country.Continent)
 }
+
+func TestLookupDomainCountry(t *testing.T) {
+	db := setupTest(t, true)
+	if db == nil {
+		return
+	}
+	country, err := db.GetCountryByAddr("google.com")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.NotEqual(t, "--", country.Code)
+	assert.NotEqual(t, "--", country.Code3)
+	assert.NotEqual(t, "N/A", country.NameASCII)
+	assert.NotEqual(t, "N/A", country.NameUTF8)
+	assert.NotEqual(t, "--", country.Continent)
+}
