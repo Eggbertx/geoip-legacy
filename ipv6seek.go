@@ -37,7 +37,7 @@ func (db *DB) seekRecordv6(ipNum *big.Int, ip net.IP) (int, error) {
 				n, recordPairLength)
 		}
 		for i := 0; i < int(recordPairLength); i++ {
-			stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
+			stackBuffer[i] = tmpBuf[i]
 		}
 
 		if checkBitV6(depth, ip) != 0 {
@@ -95,7 +95,9 @@ func (db *DB) idByAddrv6(addr net.IP) (int, error) {
 	if addr.To4() != nil {
 		return 0, ErrNotIPv6
 	}
-	// prepareTeredo(addr)
+	if (db.ExtFlags & 1) > 0 {
+		prepareTeredo(addr)
+	}
 	ipNum := ipv6ToNumber(addr)
 	return db.seekRecordv6(ipNum, addr)
 }

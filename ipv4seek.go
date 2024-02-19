@@ -32,7 +32,7 @@ func (db *DB) seekRecordv4(ipNum uint32, ip net.IP) (int, error) {
 			return 0, err
 		}
 		for i := 0; i < int(recordPairLength); i++ {
-			stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
+			stackBuffer[i] = tmpBuf[i]
 		}
 		if n != int(recordPairLength) {
 			return 0, fmt.Errorf(

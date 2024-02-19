@@ -21,12 +21,11 @@ func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 	}
 
 	gi := &DB{
-		file:     dbFile,
-		Path:     dbPath,
-		Size:     fi.Size(),
-		Options:  options,
-		Charset:  Charset_ISO_8859_1,
-		ExtFlags: 1 << TeredoBit,
+		file:    dbFile,
+		Path:    dbPath,
+		Size:    fi.Size(),
+		Options: options,
+		Charset: Charset_ISO_8859_1,
 	}
 
 	if err = gi.setupSegments(); err != nil {
