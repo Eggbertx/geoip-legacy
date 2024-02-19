@@ -1,11 +1,13 @@
 package geoiplegacy
 
 import (
-	"encoding/binary"
-	"fmt"
 	"net"
 	"os"
 	"time"
+)
+
+const (
+	ipv6StrLen = 40
 )
 
 // CountryResult is the result of scanning the database for the location of a network address
@@ -232,120 +234,6 @@ func (db *DB) getCountryByID(id int) (*CountryResult, error) {
 	}, nil
 }
 
-func (db *DB) seekRecordv4(ipNum uint32, ip net.IP) (int, error) {
-	err := db.checkModTime()
-	if err != nil {
-		return 0, err
-	}
-
-	var x uint
-	stackBuffer := make([]uint8, MaxRecordLength*2)
-	var buf []byte
-	if db.cache == nil {
-		buf = stackBuffer
-	} else {
-		buf = nil
-	}
-	var offset uint = 0
-	var p int
-	var j int
-	var recordPairLength uint = uint(db.RecordLength) * 2
-	for depth := 31; depth >= 0; depth-- {
-		var byteOffset uint = recordPairLength * offset
-
-		if byteOffset > uint(db.Size)-recordPairLength {
-			// pointer is invalid
-			break
-		}
-		if db.cache == nil && db.indexCache == nil {
-			// read from disk
-			if _, err = db.file.Seek(int64(byteOffset), 0); err != nil {
-				return 0, err
-			}
-			tmpBuf := make([]uint8, recordPairLength)
-			n, err := db.file.ReadAt(tmpBuf, int64(byteOffset))
-			if err != nil {
-				return 0, err
-			}
-			for i := 0; i < int(recordPairLength); i++ {
-				stackBuffer[i] = tmpBuf[i] // TODO: do this in a more Go-like way (probably bufio)
-			}
-			if n != int(recordPairLength) {
-				return 0, fmt.Errorf(
-					"unable to read full record (read %d, expected %d)",
-					n, recordPairLength)
-			}
-		} else if db.indexCache == nil {
-			buf = db.cache[byteOffset:]
-		} else {
-			buf = db.indexCache[byteOffset:]
-		}
-		if ipNum&(1<<depth) != 0 {
-			// take the right-handed branch
-			if db.RecordLength == 3 {
-				// most common case is completely unrolled and uses constants
-				x = (uint(buf[3*1+0]) << (0 * 8)) + (uint(buf[3*1+1]) << (1 * 8)) +
-					(uint(buf[3*1+2]) << (2 * 8))
-			} else {
-				// general case
-				j = int(db.RecordLength)
-				p = 2 * j
-				x = 0
-
-				for j > 0 {
-					x <<= 8
-					x += uint((buf[p]) - 1)
-					j--
-					p--
-				}
-			}
-		} else {
-			// take the left-handed branch
-			if db.RecordLength == 3 {
-				// most common case is completely unrolled and uses constants
-				x = (uint(buf[3*0+0]) << (0 * 8)) + (uint(buf[3*0+1]) << (1 * 8)) +
-					(uint(buf[3*0+2]) << (2 * 8))
-			} else {
-				j = int(db.RecordLength)
-				p = j
-				x = 0
-				for j > 0 {
-					x <<= 8
-					x += uint((buf[p]) - 1)
-					j--
-					p--
-				}
-			}
-		}
-		if x >= db.segments[0] {
-			db.netMask = 32 - depth
-			return int(x), nil
-		}
-		offset = x
-	}
-	return 0, nil
-}
-
-// IPv4ToNumber returns a 32-bit unsigned integer  representing the IPv4 address
-func (db *DB) IPv4ToNumber(addr net.IP) uint32 {
-	return binary.BigEndian.Uint32(addr.To4())
-}
-
-func (db *DB) idByAddrv4(addr net.IP) (int, error) {
-	if addr == nil {
-		return 0, ErrInvalidIP
-	}
-	if db.Type != CountryEdition &&
-		db.Type != LargeCountryEdition &&
-		db.Type != ProxyEdition &&
-		db.Type != NetSpeedEdition {
-		return 0, fmt.Errorf("invalid database type %s, expected %s",
-			db.Type.String(), CountryEdition.String())
-	}
-	ipNum := db.IPv4ToNumber(addr)
-	return db.seekRecordv4(ipNum, addr)
-}
-
 // GetCountryByAddr scans the database for the given IP address. If a domain
 // is passed to it, it tries to resolve it to an IP, then looks that up.
 // Currently only IPv4 is supported
@@ -362,7 +250,9 @@ func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
 			return nil, err
 		}
 	} else {
-		return nil, ErrNoIPv6
+		if countryID, err = db.idByAddrv6(ip); err != nil {
+			return nil, err
+		}
 	}
 
 	if countryID > 0 {

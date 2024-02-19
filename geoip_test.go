@@ -7,12 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTest(t *testing.T) (db *DB) {
+func setupTest(t *testing.T, v6 bool) (db *DB) {
 	dbLocation := os.Getenv("GEOIP_DB")
 	if dbLocation == "" {
-		dbLocation = "/usr/share/GeoIP/GeoIP.dat"
+		if v6 {
+			dbLocation = "/usr/share/GeoIP/GeoIPv6.dat"
+		} else {
+			dbLocation = "/usr/share/GeoIP/GeoIP.dat"
+		}
 	}
-	db, err := OpenDB(dbLocation, nil)
+	db, err := OpenDB(dbLocation, &GeoIPOptions{
+		IsIPv6: v6,
+	})
 	if !assert.NoError(t, err) {
 		return nil
 	}
@@ -23,7 +29,7 @@ func setupTest(t *testing.T) (db *DB) {
 }
 
 func TestOpenCloseDB(t *testing.T) {
-	db := setupTest(t)
+	db := setupTest(t, false)
 	if db == nil {
 		return
 	}
@@ -38,7 +44,7 @@ func TestOpenInvalidDB(t *testing.T) {
 }
 
 func TestCountryCodesByIPv4Addr(t *testing.T) {
-	db := setupTest(t)
+	db := setupTest(t, false)
 	if db == nil {
 		return
 	}
@@ -91,7 +97,7 @@ func TestCountryCodesByIPv4Addr(t *testing.T) {
 }
 
 func TestLookupPrivateIPv4Country(t *testing.T) {
-	db := setupTest(t)
+	db := setupTest(t, false)
 	if db == nil {
 		return
 	}
@@ -141,4 +147,57 @@ func TestLookupPrivateIPv4Country(t *testing.T) {
 	assert.Equal(t, "N/A", country.NameASCII)
 	assert.Equal(t, "N/A", country.NameUTF8)
 	assert.Equal(t, "--", country.Continent)
+}
+
+func TestCountryCodesByIPv6Addr(t *testing.T) {
+	db := setupTest(t, true)
+	if db == nil {
+		return
+	}
+	defer func() {
+		assert.NoError(t, db.Close())
+	}()
+
+	if !assert.Equal(t, CountryEdition, db.Type) {
+		return
+	}
+
+	country, err := db.GetCountryByAddr("2601::1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "US", country.Code)
+	assert.Equal(t, "USA", country.Code3)
+	assert.Equal(t, "United States", country.NameASCII)
+	assert.Equal(t, "United States", country.NameUTF8)
+	assert.Equal(t, "NA", country.Continent)
+
+	country, err = db.GetCountryByAddr("2801::1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "UY", country.Code)
+	assert.Equal(t, "URY", country.Code3)
+	assert.Equal(t, "Uruguay", country.NameASCII)
+	assert.Equal(t, "Uruguay", country.NameUTF8)
+	assert.Equal(t, "SA", country.Continent)
+
+	country, err = db.GetCountryByAddr("2a0b:5f80::")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, country) {
+		return
+	}
+	assert.Equal(t, "CW", country.Code)
+	assert.Equal(t, "CUW", country.Code3)
+	assert.Equal(t, "Curacao", country.NameASCII)
+	assert.Equal(t, "Curaçao", country.NameUTF8)
+	assert.Equal(t, "NA", country.Continent)
 }
