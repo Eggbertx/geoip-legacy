@@ -22,7 +22,7 @@ func OpenDB(dbPath string, options *GeoIPOptions) (*DB, error) {
 
 	gi := &DB{
 		file:    dbFile,
-		Path:    dbPath,
+		path:    dbPath,
 		Size:    fi.Size(),
 		Options: options,
 		Charset: Charset_ISO_8859_1,

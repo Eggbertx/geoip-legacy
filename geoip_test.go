@@ -22,7 +22,7 @@ func setupTest(t *testing.T, v6 bool) (db *DB) {
 	if !assert.NoError(t, err) {
 		return nil
 	}
-	if !assert.Equal(t, dbLocation, db.Path) {
+	if !assert.Equal(t, dbLocation, db.path) {
 		return nil
 	}
 	return db

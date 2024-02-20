@@ -95,7 +95,7 @@ func (db *DB) idByAddrv6(addr net.IP) (int, error) {
 	if addr.To4() != nil {
 		return 0, ErrNotIPv6
 	}
-	if (db.ExtFlags & 1) > 0 {
+	if db.Options.Teredo {
 		prepareTeredo(addr)
 	}
 	ipNum := ipv6ToNumber(addr)

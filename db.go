@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-const (
-	ipv6StrLen = 40
-)
-
 // CountryResult is the result of scanning the database for the location of a network address
 type CountryResult struct {
 	Code      string
@@ -21,14 +17,14 @@ type CountryResult struct {
 
 // GeoIPOptions are used when reading the database file
 type GeoIPOptions struct {
-	Standard bool
-	IsIPv6   bool
+	IsIPv6 bool
+	Teredo bool
 }
 
 // DB represents a legacy GeoIP database, usually having a .dat extension
 type DB struct {
 	file             *os.File
-	Path             string
+	path             string
 	segments         []uint
 	Type             DBType
 	ModTime          time.Time
@@ -38,7 +34,14 @@ type DB struct {
 	Charset          Charset
 	netMask          int // netmask of last lookup, set using depth in the seek methods
 	lastModTimeCheck time.Time
-	ExtFlags         ExtFlags // bit 0 teredo support enabled
+}
+
+func (db *DB) Path() string {
+	return db.path
+}
+
+func (db *DB) IsIPv6() bool {
+	return db.Options != nil && db.Options.IsIPv6
 }
 
 func (db *DB) setupSegments() error {
