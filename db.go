@@ -224,17 +224,9 @@ func (db *DB) getCountryByID(id int) (*CountryResult, error) {
 	}, nil
 }
 
-// GetCountryByAddr scans the database for the given IP address. If a domain
-// is passed to it, it tries to resolve it to an IP, then looks that up.
-// Currently only IPv4 is supported
-func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
-	ips, err := net.LookupIP(addr)
-	if err != nil {
-		return nil, err
-	}
-	ip := ips[0]
+func (db *DB) getCountryByIP(ip net.IP) (*CountryResult, error) {
 	var countryID int
-
+	var err error
 	if len(ip.To4()) == 4 {
 		if countryID, err = db.idByAddrv4(ip); err != nil {
 			return nil, err
@@ -249,6 +241,17 @@ func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
 		return db.getCountryByID(countryID)
 	}
 	return nil, ErrInvalidCountryID
+}
+
+// GetCountryByAddr scans the database for the given IP address or domain.
+// If a domain is passed to it, it tries to resolve it to an IP, then looks that up.
+func (db *DB) GetCountryByAddr(addr string) (*CountryResult, error) {
+	ips, err := net.LookupIP(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.getCountryByIP(ips[0])
 }
 
 // Close closes the database file if it is not nil

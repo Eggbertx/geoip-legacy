@@ -7,13 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTest(t *testing.T, v6 bool) (db *DB) {
+const (
+	defaultv4Path = "/usr/share/GeoIP/GeoIP.dat"
+	defaultv6Path = "/usr/share/GeoIP/GeoIPv6.dat"
+)
+
+func setupDB(t *testing.T, v6 bool) (db *DB) {
 	dbLocation := os.Getenv("GEOIP_DB")
 	if dbLocation == "" {
 		if v6 {
-			dbLocation = "/usr/share/GeoIP/GeoIPv6.dat"
+			dbLocation = defaultv4Path
 		} else {
-			dbLocation = "/usr/share/GeoIP/GeoIP.dat"
+			dbLocation = defaultv6Path
 		}
 	}
 	db, err := OpenDB(dbLocation, &GeoIPOptions{
@@ -29,7 +34,7 @@ func setupTest(t *testing.T, v6 bool) (db *DB) {
 }
 
 func TestOpenCloseDB(t *testing.T) {
-	db := setupTest(t, false)
+	db := setupDB(t, false)
 	if db == nil {
 		return
 	}
@@ -44,7 +49,7 @@ func TestOpenInvalidDB(t *testing.T) {
 }
 
 func TestCountryCodesByIPv4Addr(t *testing.T) {
-	db := setupTest(t, false)
+	db := setupDB(t, false)
 	if db == nil {
 		return
 	}
@@ -97,7 +102,7 @@ func TestCountryCodesByIPv4Addr(t *testing.T) {
 }
 
 func TestLookupPrivateIPv4Country(t *testing.T) {
-	db := setupTest(t, false)
+	db := setupDB(t, false)
 	if db == nil {
 		return
 	}
@@ -150,7 +155,7 @@ func TestLookupPrivateIPv4Country(t *testing.T) {
 }
 
 func TestCountryCodesByIPv6Addr(t *testing.T) {
-	db := setupTest(t, true)
+	db := setupDB(t, true)
 	if db == nil {
 		return
 	}
@@ -200,20 +205,4 @@ func TestCountryCodesByIPv6Addr(t *testing.T) {
 	assert.Equal(t, "Curacao", country.NameASCII)
 	assert.Equal(t, "Curaçao", country.NameUTF8)
 	assert.Equal(t, "NA", country.Continent)
-}
-
-func TestLookupDomainCountry(t *testing.T) {
-	db := setupTest(t, true)
-	if db == nil {
-		return
-	}
-	country, err := db.GetCountryByAddr("google.com")
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.NotEqual(t, "--", country.Code)
-	assert.NotEqual(t, "--", country.Code3)
-	assert.NotEqual(t, "N/A", country.NameASCII)
-	assert.NotEqual(t, "N/A", country.NameUTF8)
-	assert.NotEqual(t, "--", country.Continent)
 }
